@@ -1,0 +1,6 @@
+message_id,date,type,symbol,direction,entry_price,has_photo,photo_path
+507024,2026-04-12 14:44:39+00:00,whale_alert,ETH,Long,2188.07,False,
+507022,2026-04-12 14:43:03+00:00,symbol_info,SOL,,81.3300,False,
+507020,2026-04-12 14:39:38+00:00,whale_alert,ETH,Short,2186.95,False,
+507017,2026-04-12 13:59:52+00:00,symbol_info,BTC,,70859.90,False,
+507015,2026-04-12 13:49:04+00:00,symbol_info,SOL,,81.9200,False,
