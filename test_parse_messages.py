@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from parse_messages import extract_whale_alert, extract_symbol_block, extract_from_photo, parse_row, main
+from parse_messages import extract_whale_alert, extract_symbol_block, extract_from_photo, parse_row, main, check_usdt_pair
 
 
 WHALE_LONG_TEXT = (
@@ -276,3 +276,44 @@ def test_extract_from_photo_btc_live():
     assert "BTC" in result["symbol"]
     assert result["direction"] == "Long"
     assert result["leverage"] == "100"
+
+
+# --- check_usdt_pair tests ---
+
+_FAKE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "TRUMPUSDT", "XRPUSDT"]
+
+
+def test_check_usdt_pair_btc(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("BTC is pumping today") == "BTCUSDT"
+
+
+def test_check_usdt_pair_eth(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("ETH long 6x") == "ETHUSDT"
+
+
+def test_check_usdt_pair_sol(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("SOL LONG 20X entry 85956") == "SOLUSDT"
+
+
+def test_check_usdt_pair_longest_wins(monkeypatch):
+    """When text contains 'TRUMP', TRUMPUSDT should win over any shorter match."""
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("TRUMP position") == "TRUMPUSDT"
+
+
+def test_check_usdt_pair_no_match(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("random unrelated text") is None
+
+
+def test_check_usdt_pair_case_insensitive(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("btc long") == "BTCUSDT"
+
+
+def test_check_usdt_pair_empty_string(monkeypatch):
+    monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
+    assert check_usdt_pair("") is None

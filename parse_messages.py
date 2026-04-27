@@ -12,6 +12,38 @@ import os
 import re
 import sys
 
+import requests
+
+_usdt_symbols = None
+
+
+def _load_usdt_symbols():
+    """Fetch and cache all active USDT perpetual symbols from Binance."""
+    global _usdt_symbols
+    if _usdt_symbols is None:
+        try:
+            data = requests.get('https://fapi.binance.com/fapi/v1/exchangeInfo', timeout=10).json()
+            raw = [x["symbol"] for x in data["symbols"] if x['status'] == 'TRADING']
+            _usdt_symbols = sorted([i.upper() for i in raw if i.upper().endswith('USDT')])
+        except Exception:
+            _usdt_symbols = []
+    return _usdt_symbols
+
+
+def check_usdt_pair(text):
+    """Return the most specific USDT pair symbol mentioned in *text*, or None.
+
+    Fetches the active Binance USDT perpetual symbol list on first call and
+    caches it for subsequent calls.  When multiple symbols match, the one with
+    the longest base token (e.g. TRUMPUSDT over BTCUSDT when both bases appear)
+    is returned so that compound ticker names are preferred over short ones.
+    """
+    symbols = _load_usdt_symbols()
+    matched = [s for s in symbols if s[:-4] in str(text).upper()]
+    if not matched:
+        return None
+    return max(matched, key=lambda s: len(s))
+
 
 WHALE_ALERT_PATTERN = re.compile(
     r"\*\*Whale Alert:\*\*.*?"
