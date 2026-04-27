@@ -1,0 +1,16 @@
+
+import requests
+import tiktoken
+
+data = requests.get('https://fapi.binance.com/fapi/v1/exchangeInfo').json()  
+symbols = [x["symbol"] for x in data["symbols"] if x['status']=='TRADING']
+symbols = sorted([i.upper() for i in symbols if 'USDT' == i[-4:]])
+
+def check(x):
+    x= [i for i in symbols if i[:-4] in str(x).upper()]
+    
+    if len(x)==0:
+        return None
+    else:
+        n_in_b = np.argmax([len(i) for i in x])
+        return x[n_in_n]
