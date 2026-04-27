@@ -4,6 +4,7 @@ import csv
 import io
 import sys
 import os
+import runpy
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -283,6 +284,19 @@ def test_extract_from_photo_btc_live():
 _FAKE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "TRUMPUSDT", "XRPUSDT"]
 
 
+def _fake_exchange_info(symbols):
+    class FakeResponse:
+        def json(self):
+            return {
+                "symbols": [
+                    {"symbol": symbol, "status": "TRADING"}
+                    for symbol in symbols
+                ]
+            }
+
+    return FakeResponse()
+
+
 def test_check_usdt_pair_btc(monkeypatch):
     monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
     assert check_usdt_pair("BTC is pumping today") == "BTCUSDT"
@@ -317,3 +331,28 @@ def test_check_usdt_pair_case_insensitive(monkeypatch):
 def test_check_usdt_pair_empty_string(monkeypatch):
     monkeypatch.setattr("parse_messages._usdt_symbols", _FAKE_SYMBOLS)
     assert check_usdt_pair("") is None
+
+
+def test_usdssss_check_usdt_pair_loads_lazily_and_caches(monkeypatch):
+    calls = []
+
+    def fake_get(url, timeout):
+        calls.append((url, timeout))
+        return _fake_exchange_info(_FAKE_SYMBOLS)
+
+    monkeypatch.setattr("requests.get", fake_get)
+    module = runpy.run_path(os.path.join(os.path.dirname(__file__), "usdssss"))
+
+    assert calls == []
+    assert module["check_usdt_pair"]("btc long") == "BTCUSDT"
+    assert module["check_usdt_pair"]("eth short") == "ETHUSDT"
+    assert len(calls) == 1
+    assert calls[0][1] == 10
+
+
+def test_usdssss_check_keeps_backwards_compatible_name(monkeypatch):
+    monkeypatch.setattr("requests.get", lambda url, timeout: _fake_exchange_info(_FAKE_SYMBOLS))
+    module = runpy.run_path(os.path.join(os.path.dirname(__file__), "usdssss"))
+
+    assert module["check"]("TRUMP position") == "TRUMPUSDT"
+    assert module["check"]("nothing related") is None

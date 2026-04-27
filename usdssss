@@ -1,16 +1,29 @@
-
 import requests
 
-data = requests.get('https://fapi.binance.com/fapi/v1/exchangeInfo').json()
-symbols = [x["symbol"] for x in data["symbols"] if x['status']=='TRADING']
-symbols = sorted([i.upper() for i in symbols if 'USDT' == i[-4:]])
+BINANCE_EXCHANGE_INFO_URL = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
+_usdt_symbols = None
 
-def check(x):
-    matched = [i for i in symbols if i[:-4] in str(x).upper()]
 
-    if len(matched) == 0:
+def _load_usdt_symbols():
+    global _usdt_symbols
+    if _usdt_symbols is None:
+        try:
+            data = requests.get(BINANCE_EXCHANGE_INFO_URL, timeout=10).json()
+            symbols = [x["symbol"] for x in data["symbols"] if x['status'] == 'TRADING']
+            _usdt_symbols = sorted([i.upper() for i in symbols if i.upper().endswith('USDT')])
+        except Exception:
+            _usdt_symbols = []
+    return _usdt_symbols
+
+
+def check_usdt_pair(text):
+    matched = [i for i in _load_usdt_symbols() if i[:-4] in str(text).upper()]
+
+    if not matched:
         return None
-    else:
-        # Pick the symbol whose base token is longest (most specific match)
-        n_in_b = max(range(len(matched)), key=lambda i: len(matched[i]))
-        return matched[n_in_b]
+
+    return max(matched, key=len)
+
+
+def check(text):
+    return check_usdt_pair(text)
